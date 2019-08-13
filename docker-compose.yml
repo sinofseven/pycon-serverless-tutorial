@@ -1,0 +1,12 @@
+version: "3.3"
+
+services:
+  localstack:
+    container_name: localstack
+    image: localstack/localstack:0.10.1.2
+    ports:
+      - "4569:4569"
+      - "4572:4572"
+    environment:
+      - SERVICES=dynamodb,s3
+      - DEFAULT_REGION=ap-northeast-1
