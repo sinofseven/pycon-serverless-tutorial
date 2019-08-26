@@ -1,8 +1,7 @@
 import json
+import pathlib
 
 import boto3
-
-import pathlib
 
 
 class DynamoDBLocal(object):

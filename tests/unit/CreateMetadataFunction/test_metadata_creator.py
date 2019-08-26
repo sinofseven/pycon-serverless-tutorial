@@ -1,8 +1,10 @@
-import pytest
-import metadata_creator
 import json
-from freezegun import freeze_time
+
+import pytest
 import requests
+from freezegun import freeze_time
+
+import metadata_creator
 
 
 class TestValidateContentJson(object):
@@ -198,7 +200,6 @@ class TestPreSignedUrlForPut(object):
     @pytest.mark.usefixtures('create_s3_bucket', 'set_environ')
     def test_normal(self, s3_client, bucket_name, id, filename):
         actual = metadata_creator.create_pre_signed_url_for_put(id, filename, s3_client)
-        print(actual)
         assert set(actual.keys()) == {'id', 'url', 'method', 'expiresIn'}
         assert actual['id'] == id
         assert actual['method'] == 'PUT'
@@ -250,4 +251,3 @@ class TestMain(object):
         assert actual['metadata'] == expected_metadata
         assert actual['preSignedUrl']['id'] == id
         assert actual['preSignedUrl']['url'].find(f'http://localhost:4572/{bucket_name}/images/{id}/{filename}?') == 0
-

@@ -10,6 +10,8 @@ lint:
 		pipenv run mypy --ignore-missing-imports $$handler; \
 	done
 
+	pipenv run flake8 tests
+
 build: clean
 	@for src_dir in $$(find src -type d -depth 1); do \
 		root_dir=$$PWD; \

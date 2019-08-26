@@ -1,7 +1,8 @@
-import pytest
 import boto3
+import pytest
 
 from dynamodb_local import DynamoDBLocal
+
 
 @pytest.fixture(scope='function')
 def dynamodb(request):

@@ -1,6 +1,8 @@
-import pytest
-import index
 import json
+
+import pytest
+
+import index
 
 
 class TestHandler(object):
