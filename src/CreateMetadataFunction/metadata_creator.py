@@ -144,6 +144,6 @@ def create_pre_signed_url_for_put(id: str, filename: str, s3_client: BaseClient)
     return {
         'id': id,
         'url': url,
-        'method': 'PUT',
+        'method': method,
         'expiresIn': expire
     }
