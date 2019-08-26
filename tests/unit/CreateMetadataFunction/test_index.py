@@ -1,8 +1,28 @@
 import pytest
 import index
+import json
 
 
 class TestHandler(object):
+    @pytest.mark.parametrize(
+        'error, expected', [
+            (
+                ValueError,
+                {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'message': 'InternalServerError'})
+                }
+            )
+        ]
+    )
+    def test_exception(self, monkeypatch, error, expected):
+        def dummy(*_, **__):
+            raise error()
+        monkeypatch.setattr(index, 'main', dummy)
+        actual = index.handler({}, None)
+        assert actual == expected
+
     @pytest.mark.parametrize(
         'status_code, body, expected', [
             (
