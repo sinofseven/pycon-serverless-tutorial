@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  LambdaLogGroupNamePrefix:
+    Type: String
+    Default: /aws/lambda
+  StageName:
+    Type: String
+    Default: v1
+
+Globals:
+  Function:
+    Runtime: python3.7
+    Timeout: 30
+    MemorySize: 512
+    AutoPublishAlias: pycon
+    # どちらの値もLambdaでよく使うのでGlobalsに定義
+    Environment:
+      Variables:
+        DATA_BUCKET_NAME: !Ref DataBucket
+        DATA_TABLE_NAME: !Ref DataTable
+
+Resources:
+  # API定義。CORSの設定を一括で入れるために定義。
+  ApiResource:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref StageName
+      Cors:
+        AllowMethods: "'DELETE,POST,GET,OPTIONS,PUT'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+  # metadataを保存するTable。
+  # 同一アカウント、同一リージョン内で一意にしないといけないので、名前は自動生成させる
+  DataTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+
+  # 画像を保存するBucket
+  # 画像が置かれるとSNSトピックに通知を行う
+  # 全世界で一意である必要があるので、名前は自動生成させる
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        TopicConfigurations:
+          # 現状は必要ないが、サムネイルの生成も行う場合などは、filteringが必要になる
+          - Event: s3:ObjectCreated:*
+            Topic: !Ref PutEventTopic
+
+  # S3にファイルが置かれた通知を受け取るためのSNSトピック
+  PutEventTopic:
+    Type: AWS::SNS::Topic
+
+  # S3がSNSトピックにPublishできるようにするための設定
+  PutEventPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref PutEventTopic
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: SNS:Publish
+            Resource: !Ref PutEventTopic
+
+  CreateMetadataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/CreateMetadataFunction
+      Handler: index.handler
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+      Events:
+        PostMetadata:
+          Type: Api
+          Properties:
+            Path: /metadata
+            Method: POST
+            RestApiId: !Ref ApiResource
+
+  CreateMetadataLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${CreateMetadataFunction}
+
+  PutS3EventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/PutS3EventFunction
+      Handler: index.handler
+      # 画像処理であるため、メモリサイズとタイムアウトの値は大きくしている
+      MemorySize: 1024
+      Timeout: 300
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+      Events:
+        PutTopic:
+          Type: SNS
+          Properties:
+            Topic: !Ref PutEventTopic
+
+  PutS3EventLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${PutS3EventFunction}
+
+  GetMetadataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/GetMetadataFunction
+      Handler: index.handler
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess
+      Events:
+        GetAllMetadata:
+          Type: Api
+          Properties:
+            Path: /metadata
+            Method: GET
+            RestApiId: !Ref ApiResource
+        GetAMetadata:
+          Type: Api
+          Properties:
+            Path: /metadata/{id}
+            Method: GET
+            RestApiId: !Ref ApiResource
+
+  GetMetadataLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${GetMetadataFunction}
+
+  UpdateMetadataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/UpdateMetadataFunction
+      Handler: index.handler
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+      Events:
+        UpdateMetadata:
+          Type: Api
+          Properties:
+            Path: /metadata/{id}
+            Method: PUT
+            RestApiId: !Ref ApiResource
+
+  UpdateMetadataLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${UpdateMetadataFunction}
+
+Outputs:
+  ApiBaseUrl:
+    Value: !Sub https://${ApiResource}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+  ApiMetadataeUrl:
+    Value: !Sub https://${ApiResource}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/metadata
