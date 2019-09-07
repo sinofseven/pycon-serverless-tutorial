@@ -72,6 +72,9 @@ Resources:
             Action: SNS:Publish
             Resource: !Ref PutEventTopic
 
+  LogAlertTopic:
+    Type: AWS::SNS::Topic
+
   CreateMetadataFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -92,6 +95,31 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${CreateMetadataFunction}
+
+  CreateMetadataMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: "?\"\\\"levelname\\\": \\\"ERROR\\\"\""
+      LogGroupName: !Ref CreateMetadataLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${CreateMetadataFunction}-error-alert-metric-filter
+          MetricNamespace: Custom/LogMetrics
+          MetricValue: "1"
+
+  CreateMetadataAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${CreateMetadataFunction}-error-alert
+      AlarmActions:
+        - !Ref LogAlertTopic
+      ActionsEnabled: true
+      MetricName: !Sub ${CreateMetadataFunction}-error-alert-metric-filter
+      Namespace: Custom/LogMetrics
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1.0
+      ComparisonOperator: GreaterThanOrEqualToThreshold
 
   PutS3EventFunction:
     Type: AWS::Serverless::Function
@@ -114,6 +142,31 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${PutS3EventFunction}
+
+  PutS3EventMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: "?\"\\\"levelname\\\": \\\"ERROR\\\"\""
+      LogGroupName: !Ref PutS3EventLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${PutS3EventFunction}-error-alert-metric-filter
+          MetricNamespace: Custom/LogMetrics
+          MetricValue: "1"
+
+  PutS3EventAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${PutS3EventFunction}-error-alert
+      AlarmActions:
+        - !Ref LogAlertTopic
+      ActionsEnabled: true
+      MetricName: !Sub ${PutS3EventFunction}-error-alert-metric-filter
+      Namespace: Custom/LogMetrics
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1.0
+      ComparisonOperator: GreaterThanOrEqualToThreshold
 
   GetMetadataFunction:
     Type: AWS::Serverless::Function
@@ -142,6 +195,31 @@ Resources:
     Properties:
       LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${GetMetadataFunction}
 
+  GetMetadataMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: "?\"\\\"levelname\\\": \\\"ERROR\\\"\""
+      LogGroupName: !Ref GetMetadataLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${GetMetadataFunction}-error-alert-metric-filter
+          MetricNamespace: Custom/LogMetrics
+          MetricValue: "1"
+
+  GetMetadataAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${GetMetadataFunction}-error-alert
+      AlarmActions:
+        - !Ref LogAlertTopic
+      ActionsEnabled: true
+      MetricName: !Sub ${GetMetadataFunction}-error-alert-metric-filter
+      Namespace: Custom/LogMetrics
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1.0
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+
   UpdateMetadataFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -162,6 +240,31 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${UpdateMetadataFunction}
+
+  UpdateMetadataMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: "?\"\\\"levelname\\\": \\\"ERROR\\\"\""
+      LogGroupName: !Ref UpdateMetadataLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${UpdateMetadataFunction}-error-alert-metric-filter
+          MetricNamespace: Custom/LogMetrics
+          MetricValue: "1"
+
+  UpdateMetadataAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${UpdateMetadataFunction}-error-alert
+      AlarmActions:
+        - !Ref LogAlertTopic
+      ActionsEnabled: true
+      MetricName: !Sub ${UpdateMetadataFunction}-error-alert-metric-filter
+      Namespace: Custom/LogMetrics
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1.0
+      ComparisonOperator: GreaterThanOrEqualToThreshold
 
 Outputs:
   ApiBaseUrl:
