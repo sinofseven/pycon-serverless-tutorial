@@ -13,7 +13,7 @@ lint:
 	pipenv run flake8 tests
 
 build: clean
-	@for src_dir in $$(find src -type d -depth 1); do \
+	@for src_dir in $$(find src -type d -maxdepth 1); do \
 		root_dir=$$PWD; \
 		[[ ! -f $$src_dir/Pipfile ]] && touch $$src_dir/requirements.txt || echo ''; \
 		[[ -f $$src_dir/Pipfile ]] && cd $$src_dir && pipenv lock --requirements > requirements.txt && cd $$root_dir || echo ''; \
@@ -33,6 +33,10 @@ deploy: package
 		--stack-name $(stack_name) \
 		--query Stacks[0].Outputs
 
+destroy:
+	STACK_NAME=$(stack_name) pipenv run python make_bucket_empty.py
+	pipenv run aws cloudformation delete-stack --stack-name $(stack_name)
+	pipenv run aws cloudformation wait stack-delete-complete --stack-name $(stack_name)
 
 echo:
 	echo $(stack_name)
@@ -68,6 +72,7 @@ test-unit: localstack-up
 	deploy \
 	echo \
 	clean \
+	destroy \
 	localstack-up \
 	localstack-stop \
 	localstack-down
