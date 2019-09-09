@@ -14,7 +14,7 @@ lint:
 
 build: clean
 	@for src_dir in $$(find src -type d -maxdepth 1); do \
-		dir_name=$$(basename $$handler); \
+		dir_name=$$(basename $$src_dir); \
 		if [[ $$dir_name =~ src ]]; then continue; fi; \
 		root_dir=$$PWD; \
 		[[ ! -f $$src_dir/Pipfile ]] && touch $$src_dir/requirements.txt || echo ''; \
@@ -46,7 +46,7 @@ echo:
 clean:
 	@find src/** -type d \( -name '__pycache__' -o -name '*\.dist-info' -o -name '*\.egg-info' \) -print0 | xargs -0 -n1 rm -rf
 	@find src/** -type f \( -name '.coverage' -o -name '*.pyc' \) -print0 | xargs -0 -n1 rm -rf
-	@find src/** -type f -name requirements.txt | xargs --no-run-if-empty rm
+	@find src/** -type f -name requirements.txt | xargs rm -f
 
 localstack-up:
 	docker-compose up -d

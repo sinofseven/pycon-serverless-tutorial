@@ -52,6 +52,11 @@ Resources:
           # 現状は必要ないが、サムネイルの生成も行う場合などは、filteringが必要になる
           - Event: s3:ObjectCreated:*
             Topic: !Ref PutEventTopic
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: images/
 
   # S3にファイルが置かれた通知を受け取るためのSNSトピック
   PutEventTopic:
@@ -277,6 +282,9 @@ Resources:
       # 画像処理であるため、メモリサイズとタイムアウトの値は大きくしている
       MemorySize: 1024
       Timeout: 300
+      Environment:
+        Variables:
+          THUMBNAIL_SIZE: 250
       Events:
         PutTopic:
           Type: SNS
