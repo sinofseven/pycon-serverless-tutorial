@@ -167,7 +167,9 @@ def get_a_metadata(id: str, dynamodb_resource: ServiceResource, s3_client: BaseC
         pre_signed_url = None
 
         if metadata['isUploaded']:
-            pre_signed_url = create_pre_signed_url_for_get(id, metadata['filename'], metadata.get('hasThumbnail'), s3_client)
+            pre_signed_url = create_pre_signed_url_for_get(
+                id, metadata['filename'], metadata.get('hasThumbnail'), s3_client
+            )
 
         result = {
             'metadata': metadata,
