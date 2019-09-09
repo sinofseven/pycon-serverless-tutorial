@@ -266,6 +266,54 @@ Resources:
       Threshold: 1.0
       ComparisonOperator: GreaterThanOrEqualToThreshold
 
+  CreateThumbnailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/CreateThumbnailFunction
+      Handler: index.handler
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+      # 画像処理であるため、メモリサイズとタイムアウトの値は大きくしている
+      MemorySize: 1024
+      Timeout: 300
+      Events:
+        PutTopic:
+          Type: SNS
+          Properties:
+            Topic: !Ref PutEventTopic
+
+  CreateThumbnailLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${LambdaLogGroupNamePrefix}/${CreateThumbnailFunction}
+
+  CreateThumbnailMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: "?\"\\\"levelname\\\": \\\"ERROR\\\"\""
+      LogGroupName: !Ref CreateThumbnailLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${CreateThumbnailFunction}-error-alert-metric-filter
+          MetricNamespace: Custom/LogMetrics
+          MetricValue: "1"
+
+  CreateThumbnailAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${CreateThumbnailFunction}-error-alert
+      AlarmActions:
+        - !Ref LogAlertTopic
+      ActionsEnabled: true
+      MetricName: !Sub ${CreateThumbnailFunction}-error-alert-metric-filter
+      Namespace: Custom/LogMetrics
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1.0
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+
+
 Outputs:
   ApiBaseUrl:
     Value: !Sub https://${ApiResource}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
