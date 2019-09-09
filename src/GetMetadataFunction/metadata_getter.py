@@ -81,7 +81,7 @@ def get_all_metadata(dynamodb_resource: ServiceResource, s3_client: BaseClient) 
     """
     all_metadata = scan_metadata(dynamodb_resource)
     pre_signed_urls = [
-        create_pre_signed_url_for_get(x['id'], x['filename'], s3_client)
+        create_pre_signed_url_for_get(x['id'], x['filename'], x.get('hasThumbnail'), s3_client)
         # isUploadedがfalseの場合、アップロードされたファイルがないのでPreSignedUrlを生成しない
         for x in all_metadata if x['isUploaded']
     ]
@@ -108,7 +108,7 @@ def scan_metadata(dynamodb_resource: ServiceResource, last_evaluated_key: Option
     return result
 
 
-def create_pre_signed_url_for_get(id: str, filename: str, s3_client: BaseClient) -> dict:
+def create_pre_signed_url_for_get(id: str, filename: str, has_thumbnail: Optional[bool], s3_client: BaseClient) -> dict:
     bucket = get_bucket_name()
     expire = 3600
     method = 'GET'
@@ -121,12 +121,25 @@ def create_pre_signed_url_for_get(id: str, filename: str, s3_client: BaseClient)
         ExpiresIn=expire,
         HttpMethod=method
     )
-    return {
+    option = {
         'id': id,
         'url': url,
+        'thumbnail_url': None,
         'method': method,
         'expiresIn': expire
     }
+    if has_thumbnail:
+        thumbnail_url = s3_client.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={
+                'Bucket': bucket,
+                'Key': f'thumbnails/{id}/{filename}'
+            },
+            ExpiresIn=expire,
+            HttpMethod=method
+        )
+        option['thumbnail_url'] = thumbnail_url
+    return option
 
 
 def fetch_a_metadata(id: str, dynamodb_resource: ServiceResource) -> Optional[dict]:
@@ -152,8 +165,12 @@ def get_a_metadata(id: str, dynamodb_resource: ServiceResource, s3_client: BaseC
         if metadata is None:
             return (404, json.dumps({'message': 'not found'}))
         pre_signed_url = None
+
         if metadata['isUploaded']:
-            pre_signed_url = create_pre_signed_url_for_get(id, metadata['filename'], s3_client)
+            pre_signed_url = create_pre_signed_url_for_get(
+                id, metadata['filename'], metadata.get('hasThumbnail'), s3_client
+            )
+
         result = {
             'metadata': metadata,
             'preSignedUrl': pre_signed_url
