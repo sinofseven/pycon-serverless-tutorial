@@ -1,7 +1,7 @@
 from typing import Any
 
-from thumbnail_creator import main
 from logger.get_logger import get_logger
+from thumbnail_creator import main
 
 logger = get_logger(__name__)
 
