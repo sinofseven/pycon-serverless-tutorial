@@ -25,5 +25,4 @@ stack_name = os.environ['STACK_NAME']
 outpus = get_outputs(stack_name)
 
 bucket_name = outpus['DataBucketName']
-print(bucket_name)
 to_empty(bucket_name)
