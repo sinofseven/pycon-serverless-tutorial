@@ -273,3 +273,5 @@ Outputs:
     Value: !Sub https://${ApiResource}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/metadata
   LogAlartTopic:
     Value: !GetAtt LogAlertTopic.TopicName
+  DataBucketName:
+    Value: !Ref DataBucket
